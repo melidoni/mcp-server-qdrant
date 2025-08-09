@@ -13,14 +13,22 @@ This repository is an example of how to create a MCP server for [Qdrant](https:/
 
 This repository includes comprehensive documentation for both the official MCP server and our custom implementation:
 
+### **📋 Project Overview**
+- **[Project Summary](docs/PROJECT_SUMMARY.md)** - Complete transformation overview and achievements
+
+### **🔧 Configuration & Setup**
 - **[Configuration Guide](docs/CONFIGURATION.md)** - Complete runtime configuration reference
 - **[Default Values Reference](docs/DEFAULT_VALUES.md)** - Exact default values for all environment variables
-- **[Model Caching Guide](docs/MODEL_CACHING.md)** - Understanding model caching in Cloud Run deployments
-- **[Architecture Guide](docs/ARCHITECTURE_GUIDE.md)** - Complete transformation guide from custom to official MCP architecture
 - **[Quick Start Guide](docs/QUICK_START.md)** - Fast setup and testing instructions
+
+### **🏗️ Architecture & Implementation**
+- **[Architecture Guide](docs/ARCHITECTURE_GUIDE.md)** - Complete transformation guide from custom to official MCP architecture
+- **[Changes Documentation](docs/CHANGES.md)** - Custom modifications made to the server
+- **[Model Caching Guide](docs/MODEL_CACHING.md)** - Understanding model caching in Cloud Run deployments
+
+### **🧪 Testing & Operations**
 - **[Local Testing Plan](docs/LOCAL_TESTING_PLAN.md)** - Detailed testing procedures and setup
 - **[Testing Summary](docs/README_TESTING.md)** - Overview of testing infrastructure
-- **[Changes Documentation](docs/CHANGES.md)** - Custom modifications made to the server
 
 ## Overview
 
