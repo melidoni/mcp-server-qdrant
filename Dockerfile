@@ -22,5 +22,5 @@ ENV QDRANT_URL=""
 ENV QDRANT_API_KEY=""
 ENV COLLECTION_NAME="default-collection"
 
-# Run the simple server instead of the complex custom one
-CMD ["python", "simple_server.py"]
+# Run the main entry point
+CMD ["python", "main.py"]
