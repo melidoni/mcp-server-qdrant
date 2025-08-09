@@ -112,10 +112,24 @@ def check_model_specific_cache(model_name="multilingual-e5-large-instruct"):
                 if snapshot.is_dir():
                     logger.info(f"      📁 Snapshot: {snapshot.name}")
                     
-                    # Check for ONNX files in snapshot
-                    onnx_files = list(snapshot.rglob("*.onnx*"))
-                    if onnx_files:
-                        logger.info(f"         ✅ {len(onnx_files)} ONNX files")
+                    # Check for ONNX files in snapshot (both direct and onnx subdirectory)
+                    direct_onnx = list(snapshot.glob("*.onnx*"))
+                    onnx_subdir = snapshot / "onnx"
+                    subdir_onnx = list(onnx_subdir.glob("*.onnx*")) if onnx_subdir.exists() else []
+                    total_onnx = len(direct_onnx) + len(subdir_onnx)
+                    
+                    if total_onnx > 0:
+                        logger.info(f"         ✅ {total_onnx} ONNX files")
+                        if subdir_onnx:
+                            logger.info(f"            📁 onnx/ subdirectory: {len(subdir_onnx)} files")
+                            for onnx_file in subdir_onnx:
+                                try:
+                                    size_mb = onnx_file.stat().st_size / (1024*1024)
+                                    logger.info(f"               📄 {onnx_file.name} ({size_mb:.1f} MB)")
+                                except Exception as e:
+                                    logger.warning(f"               ❌ {onnx_file.name} (error reading: {e})")
+                        if direct_onnx:
+                            logger.info(f"            📄 Direct ONNX files: {len(direct_onnx)} files")
                     else:
                         logger.warning(f"         ❌ No ONNX files in snapshot")
         

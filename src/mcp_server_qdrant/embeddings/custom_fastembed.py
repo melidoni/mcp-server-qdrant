@@ -70,8 +70,20 @@ class CustomFastEmbedProvider(EmbeddingProvider):
                     
                     for snapshot in snapshots:
                         if snapshot.is_dir():
-                            onnx_files = list(snapshot.glob("*.onnx*"))
-                            logger.info(f"      📄 Snapshot {snapshot.name}: {len(onnx_files)} ONNX files")
+                            # Check both direct ONNX files and onnx subdirectory
+                            direct_onnx = list(snapshot.glob("*.onnx*"))
+                            onnx_subdir = snapshot / "onnx"
+                            subdir_onnx = list(onnx_subdir.glob("*.onnx*")) if onnx_subdir.exists() else []
+                            total_onnx = len(direct_onnx) + len(subdir_onnx)
+                            
+                            logger.info(f"      📄 Snapshot {snapshot.name}: {total_onnx} ONNX files")
+                            if subdir_onnx:
+                                logger.info(f"         📁 onnx/ subdirectory: {len(subdir_onnx)} files")
+                                for onnx_file in subdir_onnx:
+                                    size_mb = onnx_file.stat().st_size / (1024*1024) if onnx_file.exists() else 0
+                                    logger.info(f"            📄 {onnx_file.name} ({size_mb:.1f} MB)")
+                            if direct_onnx:
+                                logger.info(f"         📄 Direct ONNX files: {len(direct_onnx)} files")
         else:
             logger.warning(f"❌ Cache directory does not exist: {cache_path}")
 
