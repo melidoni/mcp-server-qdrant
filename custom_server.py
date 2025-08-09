@@ -1,4 +1,5 @@
 import logging
+import os
 from mcp_server_qdrant.mcp_server import QdrantMCPServer
 from mcp_server_qdrant.settings import QdrantSettings, ToolSettings
 from mcp_server_qdrant.embeddings.base import EmbeddingProvider
@@ -97,11 +98,17 @@ embedding_provider = CustomFastEmbedProvider(
     cache_dir="/mnt/mcp_model"
 )
 
+# Create settings with environment variables
+qdrant_settings = QdrantSettings()
+tool_settings = ToolSettings()
+
+logger.info(f"Qdrant settings: URL={qdrant_settings.location}, Collection={qdrant_settings.collection_name}")
+
 # Create MCP server with custom provider
 logger.info("Creating MCP server...")
 mcp = QdrantMCPServer(
-    tool_settings=ToolSettings(),
-    qdrant_settings=QdrantSettings(),
+    tool_settings=tool_settings,
+    qdrant_settings=qdrant_settings,
     embedding_provider=embedding_provider,
 )
 
@@ -109,5 +116,7 @@ logger.info("MCP server created successfully!")
 
 # Start the server
 if __name__ == "__main__":
-    logger.info("Starting MCP server with SSE transport...")
-    mcp.run(transport="sse", host="0.0.0.0", port=8080)
+    host = os.getenv("HOST", "0.0.0.0")
+    port = int(os.getenv("PORT", "8080"))
+    logger.info(f"Starting MCP server with SSE transport on {host}:{port}...")
+    mcp.run(transport="sse", host=host, port=port)
