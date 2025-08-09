@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import os
+from pathlib import Path
 
 from fastembed import TextEmbedding
 from fastembed.common.model_description import DenseModelDescription, PoolingType, ModelSource
@@ -24,20 +25,61 @@ class CustomFastEmbedProvider(EmbeddingProvider):
         # Query prefix for embedding model consistency
         self.query_prefix = query_prefix or "Instruct: Given a query of a social media caption, find other social media captions that are most relevant. Query: "
         
+        # Check cache status before initialization
+        self._check_cache_status()
+        
         # Register custom model if HuggingFace model ID is provided
         if self.hf_model_id:
             self._register_custom_model()
         
         # Create the embedding model
+        logger.info(f"Initializing TextEmbedding with cache_dir: {self.cache_dir}")
         self.embedding_model = TextEmbedding(
             model_name=self.model_name,
             cache_dir=self.cache_dir
         )
         
+        # Log post-initialization cache status
+        self._log_post_init_status()
+        
+    def _check_cache_status(self):
+        """Check and log the current cache status."""
+        cache_path = Path(self.cache_dir)
+        logger.info(f"🔍 Cache directory: {cache_path}")
+        logger.info(f"🔍 Cache exists: {cache_path.exists()}")
+        
+        if cache_path.exists():
+            # Check for model-specific cache
+            model_cache_name = f"models--{self.hf_model_id.replace('/', '--')}" if self.hf_model_id else f"models--intfloat--{self.model_name}"
+            model_cache_path = cache_path / model_cache_name
+            
+            logger.info(f"🎯 Model cache path: {model_cache_path}")
+            logger.info(f"🎯 Model cache exists: {model_cache_path.exists()}")
+            
+            if model_cache_path.exists():
+                # Check for required files
+                refs_main = model_cache_path / "refs" / "main"
+                snapshots_dir = model_cache_path / "snapshots"
+                
+                logger.info(f"   ✅ refs/main exists: {refs_main.exists()}")
+                logger.info(f"   📁 snapshots dir exists: {snapshots_dir.exists()}")
+                
+                if snapshots_dir.exists():
+                    snapshots = list(snapshots_dir.iterdir())
+                    logger.info(f"   📊 Found {len(snapshots)} snapshots")
+                    
+                    for snapshot in snapshots:
+                        if snapshot.is_dir():
+                            onnx_files = list(snapshot.glob("*.onnx*"))
+                            logger.info(f"      📄 Snapshot {snapshot.name}: {len(onnx_files)} ONNX files")
+        else:
+            logger.warning(f"❌ Cache directory does not exist: {cache_path}")
+
     def _register_custom_model(self):
         """Register a custom model with FastEmbed."""
         try:
             logger.info(f"Registering custom model: {self.model_name}")
+            logger.info(f"Using HuggingFace model ID: {self.hf_model_id}")
             
             # Create model source from HuggingFace
             model_source = ModelSource(hf=self.hf_model_id)
@@ -61,6 +103,32 @@ class CustomFastEmbedProvider(EmbeddingProvider):
         except Exception as e:
             logger.error(f"Failed to register custom model '{self.model_name}': {e}")
             raise
+
+    def _log_post_init_status(self):
+        """Log cache status after model initialization."""
+        logger.info("📊 Post-initialization cache status:")
+        cache_path = Path(self.cache_dir)
+        
+        if cache_path.exists():
+            try:
+                # Count total files and size
+                total_files = sum(1 for _ in cache_path.rglob("*") if _.is_file())
+                total_size = sum(f.stat().st_size for f in cache_path.rglob("*") if f.is_file())
+                
+                logger.info(f"   📁 Total files in cache: {total_files}")
+                logger.info(f"   💾 Total cache size: {total_size:,} bytes ({total_size / (1024**3):.2f} GB)")
+                
+                # Look for model directories
+                model_dirs = [d for d in cache_path.iterdir() if d.is_dir() and "models--" in d.name]
+                logger.info(f"   🤖 Model directories: {len(model_dirs)}")
+                
+                for model_dir in model_dirs:
+                    logger.info(f"      📁 {model_dir.name}")
+                    
+            except Exception as e:
+                logger.warning(f"   ⚠️ Error reading cache contents: {e}")
+        else:
+            logger.warning("   ❌ Cache directory still does not exist after initialization")
 
     def _get_vector_dimension(self) -> int:
         """Get vector dimension based on model name."""
