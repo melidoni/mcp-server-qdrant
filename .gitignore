@@ -163,3 +163,78 @@ cython_debug/
 
 # Project-specific settings
 .aider*
+
+# ========================================
+# MCP Server & Qdrant Specific
+# ========================================
+
+# Environment files with sensitive data
+.env.local
+.env.test
+*.env.local
+*.env.test
+
+# Model cache and data
+model_cache/
+*.pkl
+*.bin
+*.safetensors
+*.onnx
+*.pt
+*.pth
+
+# Logs and monitoring
+logs/
+*.log.*
+server.log
+mcp-server.log
+
+# Testing artifacts
+test-reports/
+coverage-reports/
+.coverage.*
+htmlcov/
+.test_cache/
+
+# Docker and container artifacts
+docker-compose.override.yml
+.docker/
+*.docker.env
+
+# Temporary directories
+tmp/
+temp/
+.tmp/
+.temp/
+
+# VS Code user-specific settings (keep workspace config)
+.vscode/settings.json
+.vscode/launch.json
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Vim
+*.swp
+*.swo
+*~
+
+# Backup files
+*.bak
+*.backup
+*.old
+
+# FastEmbed model downloads
+.fastembed_cache/
+fastembed_cache/
+
+# Qdrant local database (if using local mode)
+qdrant_data/
+.qdrant/
+
+# Client scripts with sensitive data
+client_scripts/secrets/
+client_scripts/*.key
+client_scripts/*.pem

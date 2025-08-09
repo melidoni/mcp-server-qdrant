@@ -1,0 +1,53 @@
+# Model cache directory (models download at runtime)
+model_cache/
+/model_cache
+
+# Logs directory
+logs/
+/logs
+
+# Test artifacts
+tests/__pycache__/
+tests/*.pyc
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Docker
+Dockerfile
+docker-compose*.yml
+
+# Testing and development files
+docs/
+Makefile
+
+# Environment files (use docker-compose env_file instead)
+.env*
+
+# Large test files or temporary directories
+temp/
+tmp/

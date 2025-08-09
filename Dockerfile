@@ -8,8 +8,8 @@ RUN pip install --no-cache-dir uv
 # Copy the entire project to get access to custom_server.py and src
 COPY . /app
 
-# Install the mcp-server-qdrant package and dependencies
-RUN uv pip install --system --no-cache-dir mcp-server-qdrant fastembed qdrant-client
+# Install the local mcp-server-qdrant package in development mode with dependencies
+RUN uv pip install --system --no-cache-dir -e . fastembed qdrant-client
 
 # Create the model cache directory
 RUN mkdir -p /mnt/mcp_model

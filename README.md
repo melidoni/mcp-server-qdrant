@@ -9,6 +9,18 @@
 
 This repository is an example of how to create a MCP server for [Qdrant](https://qdrant.tech/), a vector search engine.
 
+## 📚 Documentation
+
+This repository includes comprehensive documentation for both the official MCP server and our custom implementation:
+
+- **[Configuration Guide](docs/CONFIGURATION.md)** - Complete runtime configuration reference
+- **[Default Values Reference](docs/DEFAULT_VALUES.md)** - Exact default values for all environment variables
+- **[Architecture Guide](docs/ARCHITECTURE_GUIDE.md)** - Complete transformation guide from custom to official MCP architecture
+- **[Quick Start Guide](docs/QUICK_START.md)** - Fast setup and testing instructions
+- **[Local Testing Plan](docs/LOCAL_TESTING_PLAN.md)** - Detailed testing procedures and setup
+- **[Testing Summary](docs/README_TESTING.md)** - Overview of testing infrastructure
+- **[Changes Documentation](docs/CHANGES.md)** - Custom modifications made to the server
+
 ## Overview
 
 An official Model Context Protocol server for keeping and retrieving memories in the Qdrant vector search engine.
@@ -38,16 +50,39 @@ It acts as a semantic memory layer on top of the Qdrant database.
 
 The configuration of the server is done using environment variables:
 
-| Name                     | Description                                                         | Default Value                                                     |
-|--------------------------|---------------------------------------------------------------------|-------------------------------------------------------------------|
-| `QDRANT_URL`             | URL of the Qdrant server                                            | None                                                              |
-| `QDRANT_API_KEY`         | API key for the Qdrant server                                       | None                                                              |
-| `COLLECTION_NAME`        | Name of the default collection to use.                              | None                                                              |
-| `QDRANT_LOCAL_PATH`      | Path to the local Qdrant database (alternative to `QDRANT_URL`)     | None                                                              |
-| `EMBEDDING_PROVIDER`     | Embedding provider to use (currently only "fastembed" is supported) | `fastembed`                                                       |
-| `EMBEDDING_MODEL`        | Name of the embedding model to use                                  | `sentence-transformers/all-MiniLM-L6-v2`                          |
-| `TOOL_STORE_DESCRIPTION` | Custom description for the store tool                               | See default in [`settings.py`](src/mcp_server_qdrant/settings.py) |
-| `TOOL_FIND_DESCRIPTION`  | Custom description for the find tool                                | See default in [`settings.py`](src/mcp_server_qdrant/settings.py) |
+### Core Variables
+
+| Name                     | Description                                                         | Default Value   | Required |
+|--------------------------|---------------------------------------------------------------------|-----------------|----------|
+| `QDRANT_URL`             | URL of the Qdrant server                                            | None            | Yes*     |
+| `QDRANT_API_KEY`         | API key for the Qdrant server                                       | None            | Yes**    |
+| `COLLECTION_NAME`        | Name of the default collection to use                               | None            | Yes      |
+| `QDRANT_LOCAL_PATH`      | Path to the local Qdrant database (alternative to `QDRANT_URL`)     | None            | Yes*     |
+| `QDRANT_SEARCH_LIMIT`    | Maximum number of search results to return                          | `10`            | No       |
+| `QDRANT_READ_ONLY`       | Enable read-only mode                                               | `false`         | No       |
+
+### Embedding Configuration
+
+| Name                     | Description                                                         | Default Value                                | Required |
+|--------------------------|---------------------------------------------------------------------|----------------------------------------------|----------|
+| `EMBEDDING_PROVIDER`     | Embedding provider: `fastembed` or `custom_fastembed`              | `fastembed`                                  | No       |
+| `EMBEDDING_MODEL`        | Name of the embedding model to use                                  | `sentence-transformers/all-MiniLM-L6-v2`    | No       |
+| `CUSTOM_HF_MODEL_ID`     | HuggingFace model ID (for `custom_fastembed` provider)             | None (optional)                              | No       |
+| `CUSTOM_QUERY_PREFIX`    | Query prefix for search optimization                                | Built-in social media prefix                | No       |
+| `MODEL_CACHE_DIR`        | Directory for model caching                                         | `/mnt/mcp_model`                             | No       |
+
+### Tool Descriptions
+
+| Name                     | Description                                                         | Default Value                                |
+|--------------------------|---------------------------------------------------------------------|----------------------------------------------|
+| `TOOL_STORE_DESCRIPTION` | Custom description for the store tool                               | See [`DEFAULT_VALUES.md`](docs/DEFAULT_VALUES.md) |
+| `TOOL_FIND_DESCRIPTION`  | Custom description for the find tool                                | See [`DEFAULT_VALUES.md`](docs/DEFAULT_VALUES.md) |
+
+\* Either `QDRANT_URL` or `QDRANT_LOCAL_PATH` is required, but not both.
+\** `QDRANT_API_KEY` is required when using cloud Qdrant instances.
+
+> [!TIP]
+> For a complete reference of all environment variables and their exact default values, see [`docs/DEFAULT_VALUES.md`](docs/DEFAULT_VALUES.md).
 
 Note: You cannot provide both `QDRANT_URL` and `QDRANT_LOCAL_PATH` at the same time.
 
