@@ -1,8 +1,10 @@
 import logging
+import re
 import uuid
 from typing import Any
+from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from qdrant_client import AsyncQdrantClient, models
 
 from mcp_server_qdrant.embeddings.base import EmbeddingProvider
@@ -16,11 +18,79 @@ ArbitraryFilter = dict[str, Any]
 
 class Entry(BaseModel):
     """
-    A single entry in the Qdrant collection.
+    A single entry in the Qdrant collection with enhanced metadata support.
     """
 
     content: str
     metadata: Metadata | None = None
+    similarity_score: float | None = Field(default=None, description="Vector similarity score from Qdrant search")
+    platform: str | None = Field(default=None, description="Detected social media platform")
+    date: str | None = Field(default=None, description="Extracted or inferred date")
+    
+    def detect_platform(self) -> str:
+        """
+        Detect social media platform from content hashtags and keywords.
+        """
+        content_lower = self.content.lower()
+        
+        # Platform-specific hashtag patterns
+        if any(tag in content_lower for tag in ['#twitter', '#tweet', '@']):
+            return 'Twitter/X'
+        elif any(tag in content_lower for tag in ['#instagram', '#insta', '#ig']):
+            return 'Instagram'
+        elif any(tag in content_lower for tag in ['#facebook', '#fb']):
+            return 'Facebook'
+        elif any(tag in content_lower for tag in ['#linkedin', '#in']):
+            return 'LinkedIn'
+        elif any(tag in content_lower for tag in ['#tiktok', '#fyp', '#foryou']):
+            return 'TikTok'
+        elif any(tag in content_lower for tag in ['#youtube', '#yt']):
+            return 'YouTube'
+        elif any(tag in content_lower for tag in ['#reddit', '/r/']):
+            return 'Reddit'
+        elif 'http' in content_lower:
+            return 'Web/Blog'
+        else:
+            return 'Social Media'
+    
+    def extract_date(self) -> str | None:
+        """
+        Extract date information from content or metadata.
+        """
+        # Try to extract from metadata first
+        if self.metadata:
+            if 'date' in self.metadata:
+                return str(self.metadata['date'])
+            if 'timestamp' in self.metadata:
+                return str(self.metadata['timestamp'])
+            if 'created_at' in self.metadata:
+                return str(self.metadata['created_at'])
+        
+        # Try to extract date patterns from content
+        date_patterns = [
+            r'\d{4}-\d{2}-\d{2}',  # YYYY-MM-DD
+            r'\d{2}/\d{2}/\d{4}',  # MM/DD/YYYY
+            r'\d{1,2}/\d{1,2}/\d{2,4}',  # M/D/YY or MM/DD/YYYY
+        ]
+        
+        for pattern in date_patterns:
+            match = re.search(pattern, self.content)
+            if match:
+                return match.group()
+        
+        return None
+    
+    def enrich_metadata(self) -> "Entry":
+        """
+        Enrich entry with platform and date detection if not already set.
+        """
+        if not self.platform:
+            self.platform = self.detect_platform()
+        
+        if not self.date:
+            self.date = self.extract_date()
+            
+        return self
 
 
 class QdrantConnector:
@@ -99,16 +169,18 @@ class QdrantConnector:
         query_filter: models.Filter | None = None,
     ) -> list[Entry]:
         """
-        Find points in the Qdrant collection. If there are no entries found, an empty list is returned.
+        Find points in the Qdrant collection with similarity scores and enhanced metadata.
         :param query: The query to use for the search.
         :param collection_name: The name of the collection to search in, optional. If not provided,
                                 the default collection is used.
         :param limit: The maximum number of entries to return.
         :param query_filter: The filter to apply to the query, if any.
 
-        :return: A list of entries found.
+        :return: A list of entries found with similarity scores and enhanced metadata.
         """
         collection_name = collection_name or self._default_collection_name
+        assert collection_name is not None, "Collection name must be provided"
+        
         collection_exists = await self._client.collection_exists(collection_name)
         if not collection_exists:
             return []
@@ -129,13 +201,27 @@ class QdrantConnector:
             query_filter=query_filter,
         )
 
-        return [
-            Entry(
-                content=result.payload.get("document") or result.payload.get("text", ""),
-                metadata=result.payload.get("metadata"),
+        entries = []
+        for result in search_results.points:
+            # Handle potential None payload
+            payload = result.payload or {}
+            
+            # Extract content with fallback
+            content = payload.get("document") or payload.get("text", "")
+            metadata = payload.get("metadata")
+            
+            # Create entry with similarity score
+            entry = Entry(
+                content=content,
+                metadata=metadata,
+                similarity_score=float(result.score) if result.score is not None else None,
             )
-            for result in search_results.points
-        ]
+            
+            # Enrich with platform and date detection
+            entry = entry.enrich_metadata()
+            entries.append(entry)
+
+        return entries
 
     async def _ensure_collection_exists(self, collection_name: str):
         """
