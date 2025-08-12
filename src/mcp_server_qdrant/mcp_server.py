@@ -127,16 +127,16 @@ class QdrantMCPServer(FastMCP):
                 str, Field(description="The collection to search in")
             ],
             query_filter: ArbitraryFilter | None = None,
-        ) -> list[str]:
+        ) -> dict[str, Any]:
             """
             Find memories in Qdrant with enhanced metadata (similarity scores, platform, dates).
-            Returns structured JSON format by default for seamless annotation agent integration.
+            Returns structured JSON object for seamless annotation agent integration.
             :param ctx: The context for the request.
             :param query: The query to use for the search.
             :param collection_name: The name of the collection to search in, optional. If not provided,
                                     the default collection is used.
             :param query_filter: The filter to apply to the query.
-            :return: Structured JSON with enhanced metadata for each search result.
+            :return: Structured JSON object with enhanced metadata for each search result.
             """
 
             # Log query_filter
@@ -157,20 +157,18 @@ class QdrantMCPServer(FastMCP):
             )
             
             if not entries:
-                empty_result = {
+                return {
                     "query": query,
                     "total_results": 0,
                     "entries": []
                 }
-                return [json.dumps(empty_result, indent=2)]
             
-            # Always return structured JSON format with enhanced metadata
-            results = {
+            # Return structured JSON object with enhanced metadata
+            return {
                 "query": query,
                 "total_results": len(entries),
                 "entries": [self.format_entry_structured(entry) for entry in entries]
             }
-            return [json.dumps(results, indent=2)]
 
         find_foo = find
         store_foo = store
