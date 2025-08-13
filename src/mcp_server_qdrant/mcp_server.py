@@ -56,10 +56,36 @@ class QdrantMCPServer(FastMCP):
 
     def format_entry(self, entry: Entry) -> str:
         """
-        Feel free to override this method in your subclass to customize the format of the entry.
+        Format entry with enhanced metadata including similarity scores, platform, and date.
         """
-        entry_metadata = json.dumps(entry.metadata) if entry.metadata else ""
+        # Create structured metadata with enhanced fields
+        enhanced_metadata = {
+            "similarity_score": entry.similarity_score,
+            "platform": entry.platform,
+            "date": entry.date,
+            "original_metadata": entry.metadata
+        }
+        
+        entry_metadata = json.dumps(enhanced_metadata)
         return f"<entry><content>{entry.content}</content><metadata>{entry_metadata}</metadata></entry>"
+
+    def format_entry_structured(self, entry: Entry) -> dict:
+        """
+        Return structured entry data for programmatic consumption.
+        """
+        result = {
+            "content": entry.content,
+            "similarity_score": entry.similarity_score,
+            "platform": entry.platform,
+        }
+        
+        # Only include date and metadata if they have values
+        if entry.date is not None:
+            result["date"] = entry.date
+        if entry.metadata is not None:
+            result["metadata"] = entry.metadata
+            
+        return result
 
     def setup_tools(self):
         """
@@ -107,38 +133,48 @@ class QdrantMCPServer(FastMCP):
                 str, Field(description="The collection to search in")
             ],
             query_filter: ArbitraryFilter | None = None,
-        ) -> list[str]:
+        ) -> dict[str, Any]:
             """
-            Find memories in Qdrant.
+            Find memories in Qdrant with enhanced metadata (similarity scores, platform, dates).
+            Returns structured JSON object for seamless annotation agent integration.
             :param ctx: The context for the request.
             :param query: The query to use for the search.
             :param collection_name: The name of the collection to search in, optional. If not provided,
                                     the default collection is used.
             :param query_filter: The filter to apply to the query.
-            :return: A list of entries found.
+            :return: Structured JSON object with enhanced metadata for each search result.
             """
 
             # Log query_filter
             await ctx.debug(f"Query filter: {query_filter}")
 
-            query_filter = models.Filter(**query_filter) if query_filter else None
+            # Convert ArbitraryFilter to models.Filter if needed
+            filter_obj: models.Filter | None = None
+            if query_filter:
+                filter_obj = models.Filter(**query_filter)
 
-            await ctx.debug(f"Finding results for query {query}")
+            await ctx.debug(f"Finding results for query '{query}' with enhanced metadata")
 
             entries = await self.qdrant_connector.search(
                 query,
                 collection_name=collection_name,
                 limit=self.qdrant_settings.search_limit,
-                query_filter=query_filter,
+                query_filter=filter_obj,
             )
+            
             if not entries:
-                return [f"No information found for the query '{query}'"]
-            content = [
-                f"Results for the query '{query}'",
-            ]
-            for entry in entries:
-                content.append(self.format_entry(entry))
-            return content
+                return {
+                    "query": query,
+                    "total_results": 0,
+                    "entries": []
+                }
+            
+            # Return structured JSON object with enhanced metadata
+            return {
+                "query": query,
+                "total_results": len(entries),
+                "entries": [self.format_entry_structured(entry) for entry in entries]
+            }
 
         find_foo = find
         store_foo = store

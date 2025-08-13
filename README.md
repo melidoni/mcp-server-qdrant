@@ -48,12 +48,103 @@ It acts as a semantic memory layer on top of the Qdrant database.
                                    If there is a default collection name, this field is not enabled.
    - Returns: Confirmation message
 2. `qdrant-find`
-   - Retrieve relevant information from the Qdrant database
+   - Retrieve relevant information from the Qdrant database with enhanced metadata
    - Input:
      - `query` (string): Query to use for searching
      - `collection_name` (string): Name of the collection to store the information in. This field is required if there are no default collection name.
                                    If there is a default collection name, this field is not enabled.
-   - Returns: Information stored in the Qdrant database as separate messages
+   - Returns: Information stored in the Qdrant database with enriched metadata including:
+     - **Similarity Scores**: Direct cosine similarity scores from Qdrant vector search (0.0-1.0)
+     - **Platform Detection**: Automatic detection of social media platforms from content hashtags
+     - **Date Extraction**: Extracted dates from content and metadata when available
+     - **Enhanced Metadata**: Structured JSON with all available metadata fields
+
+## 🚀 Enhanced Features
+
+This MCP server includes several enhancements beyond the basic Qdrant functionality to provide richer, more contextual search results for AI agents:
+
+### ✨ Key Enhancements
+
+1. **Direct Similarity Scores**: Extracts and returns actual cosine similarity scores from Qdrant vector search results (0.0-1.0 range)
+2. **Automatic Platform Detection**: Identifies social media platforms from content hashtags and patterns
+3. **Date Extraction**: Extracts dates from content and metadata when available
+4. **Enhanced JSON Output**: Structured metadata with all enrichment data for downstream processing
+5. **Query Source Tracking**: Maintains query attribution for result provenance
+
+### 🎯 Similarity Scores
+
+**Direct from Qdrant Database**: Similarity scores are extracted directly from Qdrant's cosine similarity calculations, not computed by the MCP server. This ensures accurate semantic relevance scoring.
+
+```json
+{
+  "similarity_score": 0.95,  // Direct from Qdrant vector search
+  "content": "AI policy discussion...",
+  "platform": "Twitter/X",
+  "date": "2024-01-15"
+}
+```
+
+**Score Ranges**:
+- **0.90 - 1.00**: Highly relevant matches (excellent semantic similarity)
+- **0.80 - 0.89**: Good relevance (strong topical alignment)
+- **0.70 - 0.79**: Moderate relevance (related concepts)
+- **0.60 - 0.69**: Weak relevance (tangential connections)
+- **< 0.60**: Poor relevance (consider different query strategy)
+
+### 🔍 Platform Detection
+
+Automatic detection of social media platforms from content patterns:
+
+```python
+# Detected platforms from hashtags and content:
+- Twitter/X: #twitter, @mentions, twitter.com
+- Instagram: #instagram, #insta, instagram.com
+- LinkedIn: #linkedin, linkedin.com
+- TikTok: #tiktok, tiktok.com
+- Facebook: #facebook, facebook.com
+- YouTube: #youtube, youtube.com, youtu.be
+- Reddit: #reddit, reddit.com, r/subreddit
+```
+
+### 📅 Date Extraction
+
+Extracts dates from various sources:
+- Content timestamps
+- Metadata date fields
+- Text-based date references
+- ISO format dates (YYYY-MM-DD)
+
+### 📊 Enhanced Response Format
+
+**Standard XML Response**:
+```xml
+<entry>
+    <content>AI policy discussion about regulation on social media</content>
+    <metadata>{
+        "similarity_score": 0.95,
+        "platform": "Twitter/X",
+        "date": "2024-01-15",
+        "original_metadata": {...}
+    }</metadata>
+</entry>
+```
+
+**JSON Format** (for structured processing):
+```json
+{
+    "query": "AI policy regulation",
+    "total_results": 10,
+    "entries": [
+        {
+            "content": "AI policy discussion on #Twitter about regulation",
+            "similarity_score": 0.95,
+            "platform": "Twitter/X",
+            "date": "2024-01-15",
+            "metadata": {...}
+        }
+    ]
+}
+```
 
 ## Environment Variables
 
@@ -231,6 +322,44 @@ This MCP server can be used with any MCP-compatible client. For example, you can
 [Cursor](https://docs.cursor.com/context/model-context-protocol) and [VS Code](https://code.visualstudio.com/docs), which provide built-in support for the Model Context
 Protocol.
 
+### Using with AI Policy Agents
+
+This enhanced MCP server is specifically optimized for AI policy analysis and social media content evaluation:
+
+```bash
+QDRANT_URL="http://localhost:6333" \
+COLLECTION_NAME="social-media-content" \
+EMBEDDING_MODEL="intfloat/multilingual-e5-large-instruct" \
+QDRANT_SEARCH_LIMIT="10" \
+TOOL_FIND_DESCRIPTION="Search for relevant social media content with enhanced metadata enrichment. \
+Returns structured results with cosine similarity scores from Qdrant vector search (0.0-1.0), \
+automatic platform identification from hashtags, extracted dates for temporal analysis, \
+and comprehensive metadata for policy compliance evaluation." \
+uvx mcp-server-qdrant --transport sse
+```
+
+**Key Benefits for Policy Agents**:
+- **Precise Similarity Scoring**: Direct cosine similarity scores from Qdrant (0.90+ = highly relevant)
+- **Platform Context**: Automatic detection of Twitter/X, Instagram, LinkedIn, TikTok, etc.
+- **Temporal Analysis**: Date extraction for compliance timeline tracking
+- **Query Attribution**: Track which search queries found specific content
+- **Enhanced Metadata**: Structured JSON with enriched information for downstream processing
+
+**Example Enhanced Response**:
+```json
+{
+  "content": "AI regulation discussion on #Twitter about policy compliance",
+  "similarity_score": 0.95,
+  "platform": "Twitter/X",
+  "date": "2024-01-15",
+  "metadata": {
+    "original_metadata": {...},
+    "platform": "Twitter/X",
+    "date": "2024-01-15"
+  }
+}
+```
+
 ### Using with Cursor/Windsurf
 
 You can configure this MCP server to work as a code search tool for Cursor or Windsurf by customizing the tool
@@ -244,10 +373,10 @@ The 'information' parameter should contain a natural language description of wha
 while the actual code should be included in the 'metadata' parameter as a 'code' property. \
 The value of 'metadata' is a Python dictionary with strings as keys. \
 Use this whenever you generate some code snippet." \
-TOOL_FIND_DESCRIPTION="Search for relevant code snippets based on natural language descriptions. \
+TOOL_FIND_DESCRIPTION="Search for relevant code snippets based on natural language descriptions with similarity scores. \
 The 'query' parameter should describe what you're looking for, \
-and the tool will return the most relevant code snippets. \
-Use this when you need to find existing code snippets for reuse or reference." \
+and the tool will return the most relevant code snippets with cosine similarity scores (0.0-1.0) \
+and enhanced metadata. Use this when you need to find existing code snippets for reuse or reference." \
 uvx mcp-server-qdrant --transport sse # Enable SSE transport
 ```
 
