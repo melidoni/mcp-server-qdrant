@@ -73,13 +73,19 @@ class QdrantMCPServer(FastMCP):
         """
         Return structured entry data for programmatic consumption.
         """
-        return {
+        result = {
             "content": entry.content,
             "similarity_score": entry.similarity_score,
             "platform": entry.platform,
-            "date": entry.date,
-            "metadata": entry.metadata
         }
+        
+        # Only include date and metadata if they have values
+        if entry.date is not None:
+            result["date"] = entry.date
+        if entry.metadata is not None:
+            result["metadata"] = entry.metadata
+            
+        return result
 
     def setup_tools(self):
         """

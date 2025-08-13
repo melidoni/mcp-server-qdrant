@@ -51,7 +51,7 @@ class Entry(BaseModel):
         elif 'http' in content_lower:
             return 'Web/Blog'
         else:
-            return 'Social Media'
+            return 'Unspecified'
     
     def extract_date(self) -> str | None:
         """
